@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Axios from 'axios'
+import { toast } from 'react-toastify'
+import { BsEyeFill, BsEyeSlashFill } from 'react-icons/bs'
 export default function Register() {
   const [form, setForm] = useState({
     firstName: '',
@@ -8,27 +10,31 @@ export default function Register() {
     email: '',
     password: '',
   })
-
+  const [show, setShow] = useState(false)
   const navigate = useNavigate()
-
+  const [spinner, setSpinner] = useState(false)
   const signup = async (e) => {
     e.preventDefault()
+    setSpinner(true)
     try {
-      const data = await Axios.post('/signup', {
+      const { data } = await Axios.post('/signup', {
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email,
         password: form.password,
       })
       console.log(data)
-      if (data && data.status == 200) {
+      setSpinner(false)
+      if (data) {
+        console.log(data.message)
+
+        toast.success(data.message)
         navigate('/login')
       }
-      // ctxDispatch({ type: "USER_SIGNIN", payload: data });
-      // localStorage.setItem("userInfo", JSON.stringify(data));
-      // navigate(redirect || "/");
     } catch (err) {
-      // toast.error(getError(err))
+      setSpinner(false)
+
+      toast.error(err.response.data.message)
       console.log(err)
     }
   }
@@ -80,18 +86,58 @@ export default function Register() {
             </div>
             <div className="mb-5">
               <label className="text-light">Password</label>
-              <input
-                type="password"
-                className="form-control account"
-                // placeholder="Email Address"
-                name="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
+              <div className="d-flex justify-content-center align-items-center">
+                <input
+                  type={`${show ? 'text' : 'password'}`}
+                  className="form-control account position-relative"
+                  // placeholder="Email Address"
+                  name="password"
+                  value={form.password}
+                  onChange={(e) =>
+                    setForm({ ...form, password: e.target.value })
+                  }
+                />
+                {show ? (
+                  <p
+                    className="text-light fw-bold position-absolute"
+                    onClick={() => setShow(false)}
+                    style={{
+                      marginLeft: '515px',
+                      marginTop: '15px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Show
+                  </p>
+                ) : (
+                  <p
+                    className="text-light fw-bold position-absolute"
+                    onClick={() => setShow(true)}
+                    style={{
+                      marginLeft: '515px',
+                      marginTop: '15px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Hide
+                  </p>
+                )}
+              </div>
             </div>
             <div className="mb-5 d-flex flex-column justify-content-center">
               <button className="btn btn-dark sign_btn w-100" onClick={signup}>
                 SignUp
+                {spinner ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
+                  </>
+                ) : (
+                  <></>
+                )}
               </button>
               <p className="text-center text-light">
                 Already Have an Account ? <Link to="/login">Login</Link>

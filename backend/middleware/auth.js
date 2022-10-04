@@ -5,7 +5,7 @@ const verifyEmail = async (req, res, next) => {
   try {
     const user = await userModel.findOne({ email: req.body.email })
     if (!user.isVerified) {
-      res.status(400).json({ error: 'Please Verify Email First' })
+      res.status(400).json({ message: 'Please Verify Your Email First' })
     } else {
       next()
     }

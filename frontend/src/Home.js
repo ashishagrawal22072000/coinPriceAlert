@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Store } from './Store'
+import { toast } from 'react-toastify'
+
 export default function Home() {
   const { state } = useContext(Store)
   const { userInfo } = state
@@ -8,11 +10,11 @@ export default function Home() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [currency, setCurrency] = useState('usd')
-
+  const [spinner, setSpinner] = useState(false)
   const [coinName, setCoinName] = useState('')
-  console.log(userInfo.data)
+  console.log(userInfo)
   const [form, setForm] = useState({
-    email: '',
+    email: userInfo.email,
     target: '',
     coinType: '',
   })
@@ -22,6 +24,7 @@ export default function Home() {
   }, [page])
 
   const calldata = async () => {
+    setSpinner(true)
     const options = {
       method: 'GET',
     }
@@ -33,47 +36,47 @@ export default function Home() {
       .then((response) => response.json())
       .then((response) => {
         console.log(response)
+        setSpinner(false)
         setCoins(response)
       })
       .catch((err) => console.error(err))
   }
 
-  // useEffect(() => {
-  //   if (page == 0) {
-  //     setData(coins.slice(0, page + 25))
-  //   } else {
-  //     setData(coins.slice(page, page + 25))
-  //   }
-  // }, [page])
-
   const setAlert = async (e) => {
     e.preventDefault()
-    console.log(form)
+    setSpinner(true)
     const { email, target, coinType } = form
-    const res = await fetch('/track', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        authorization: `Bearer ${userInfo.data.token}`,
-      },
-      body: JSON.stringify({
-        email,
-        target,
-        coinType,
-        userID: userInfo.data._id,
-      }),
-    })
-
-    const data = await res.json()
-    // setSpinner(false);
-    if (res.status === 400 || !data) {
-      // toast.error(data.error[0].msg);
-      console.log(res)
+    if (email == '' || target == '' || coinType == '') {
+      toast.error('Please Fill All The Fields First')
+      setSpinner(false)
     } else {
+      const res = await fetch('/track', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${userInfo.token}`,
+        },
+        body: JSON.stringify({
+          email,
+          target,
+          coinType,
+          userID: userInfo._id,
+        }),
+      })
+
+      const data = await res.json()
       console.log(res)
-      setForm({ email: '', target: '', coinType: '' })
-      // toast.success(data.message);
-      // navigate("/login", { replace: true });
+      console.log(data)
+      setSpinner(false)
+      if (res.status === 400 || !data) {
+        toast.error(data.message)
+        setSpinner(false)
+      } else {
+        toast.success(data.message)
+
+        setForm({ email: '', target: '', coinType: '' })
+        navigate('/track')
+      }
     }
   }
 
@@ -90,82 +93,71 @@ export default function Home() {
           />
         </div>
       </div>
-      <div className="container-fluid d-flex justify-content-center align-items-center">
-        <table className="container mt-5 table tab">
-          <tbody>
-            {coins
-              .filter((ele) => {
-                if (search == '') {
-                  return ele
-                } else if (
-                  ele.id.toLowerCase().includes(search.toLowerCase())
-                ) {
-                  return ele
-                } else {
-                  return false
-                }
-              })
-              .map((ele) => {
-                return (
-                  <>
-                    <tr className="mt-5">
-                      <td>
-                        <img src={ele.image} height="25px" width="25px" />
-                      </td>
-                      <td>
-                        {ele.id.slice(0, 1).toUpperCase() + ele.id.slice(1)}
-                      </td>
-                      <td>{ele.symbol.toUpperCase()}</td>
-                      <td>${ele.current_price}</td>
-                      <td>${ele.total_volume}</td>
+      {spinner ? (
+        <>
+          <div className="container-fluid d-flex justify-content-center align-items-center p-5">
+            <div className="container-fluid d-flex justify-content-center align-items-center p-5">
+              <span
+                className="spinner-border spinner-border-sm text-light"
+                role="status"
+                style={{ fontSize: '30px' }}
+                aria-hidden="true"
+              ></span>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="container-fluid d-flex justify-content-center align-items-center">
+            <table className="container mt-5 table tab">
+              <tbody>
+                {coins
+                  .filter((ele) => {
+                    if (search == '') {
+                      return ele
+                    } else if (
+                      ele.id.toLowerCase().includes(search.toLowerCase())
+                    ) {
+                      return ele
+                    } else {
+                      return false
+                    }
+                  })
+                  .map((ele) => {
+                    return (
+                      <>
+                        <tr className="mt-5">
+                          <td>
+                            <img src={ele.image} height="25px" width="25px" />
+                          </td>
+                          <td>
+                            {ele.id.slice(0, 1).toUpperCase() + ele.id.slice(1)}
+                          </td>
+                          <td>{ele.symbol.toUpperCase()}</td>
+                          <td>${ele.current_price}</td>
+                          <td>${ele.total_volume}</td>
 
-                      <td
-                        style={{
-                          color:
-                            ele.price_change_percentage_24h > 0
-                              ? 'green'
-                              : 'red',
-                        }}
-                      >
-                        {ele.price_change_percentage_24h}
-                      </td>
-                      <td>${ele.market_cap}</td>
-                    </tr>
-                  </>
-                )
-              })}
-            {/* {coins.map((coin) => {
-                return (
-                  <>
-                    <tr className="mt-5">
-                      <td>
-                        <img src={coin.image} height="25px" width="25px" />
-                      </td>
-                      <td>
-                        {coin.id.slice(0, 1).toUpperCase() + coin.id.slice(1)}
-                      </td>
-                      <td>{coin.symbol.toUpperCase()}</td>
-                      <td>${coin.current_price}</td>
-                      <td>${coin.total_volume}</td>
-  
-                      <td
-                        style={{
-                          color:
-                            coin.price_change_percentage_24h > 0
-                              ? 'green'
-                              : 'red',
-                        }}
-                      >
-                        {coin.price_change_percentage_24h}
-                      </td>
-                      <td>${coin.market_cap}</td>
-                    </tr>
-                  </>
-                )
-              })} */}
-          </tbody>
-        </table>
-      </div>
+                          <td
+                            style={{
+                              color:
+                                ele.price_change_percentage_24h > 0
+                                  ? 'green'
+                                  : 'red',
+                            }}
+                          >
+                            {ele.price_change_percentage_24h}
+                          </td>
+                          <td>${ele.market_cap}</td>
+                        </tr>
+                      </>
+                    )
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
       <div className="container d-flex justify-content-between">
         <button
           className="btn btn-dark"
@@ -202,7 +194,6 @@ export default function Home() {
                 <input
                   type="email"
                   className="form-control account"
-                  // placeholder="Enter your email address"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
@@ -212,7 +203,6 @@ export default function Home() {
                 <input
                   type="text"
                   className="form-control account"
-                  // placeholder="Enter Your Target"
                   value={form.target}
                   onChange={(e) => setForm({ ...form, target: e.target.value })}
                 />
@@ -243,16 +233,19 @@ export default function Home() {
                 onClick={setAlert}
               >
                 Set Alert
+                {spinner ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
+                  </>
+                ) : (
+                  <></>
+                )}
               </button>
             </div>
-            {/* <div className="mb-5 d-flex flex-column justify-content-center">
-              <button className="btn btn-dark sign_btn w-100" onClick={signup}>
-                SignUp
-              </button>
-              <p className="text-center text-light">
-                Already Have an Account ? <Link to="/login">Login</Link>
-              </p>
-            </div> */}
           </form>
         </div>
       </div>

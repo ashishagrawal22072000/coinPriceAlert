@@ -1,7 +1,8 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import Axios from 'axios'
 import { Store } from './Store'
+import { toast } from 'react-toastify'
 export default function EditAlert() {
   const { id } = useParams()
   console.log(id)
@@ -12,6 +13,8 @@ export default function EditAlert() {
     target: '',
     coinType: '',
   })
+  const [spinner, setSpinner] = useState(false)
+  const navigate = useNavigate()
   useEffect(() => {
     fetchAlert()
   }, [])
@@ -30,29 +33,35 @@ export default function EditAlert() {
 
   const updateAlert = async (e) => {
     e.preventDefault()
+    setSpinner(true)
     const { email, target, coinType } = form
-    const res = await fetch(`/track/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        target,
-        coinType,
-        userID: userInfo.data._id,
-      }),
-    })
-
-    const data = await res.json()
-    // setSpinner(false);
-    if (res.status === 400 || !data) {
-      // toast.error(data.error[0].msg);
-      console.log(res)
+    if (email == '' || target == '' || coinType == '') {
+      toast.error('Please Fill All The Fields First')
     } else {
-      console.log(res)
-      // toast.success(data.message);
-      // navigate("/login", { replace: true });
+      const res = await fetch(`/track/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          target,
+          coinType,
+          userID: userInfo._id,
+        }),
+      })
+
+      const data = await res.json()
+      setSpinner(false)
+      if (res.status === 400 || !data) {
+        toast.error(data.message)
+        setSpinner(false)
+        console.log(res)
+      } else {
+        toast.success(data.message)
+        Navigate('/track')
+        console.log(res)
+      }
     }
   }
 
@@ -68,7 +77,6 @@ export default function EditAlert() {
                 <input
                   type="email"
                   className="form-control account"
-                  // placeholder="Enter your email address"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
@@ -78,7 +86,6 @@ export default function EditAlert() {
                 <input
                   type="text"
                   className="form-control account"
-                  // placeholder="Enter Your Target"
                   value={form.target}
                   onChange={(e) => setForm({ ...form, target: e.target.value })}
                 />
@@ -88,7 +95,6 @@ export default function EditAlert() {
                 <input
                   type="text"
                   className="form-control account"
-                  // placeholder="Enter Your Target"
                   value={form.coinType}
                   onChange={(e) =>
                     setForm({ ...form, coinType: e.target.value })
@@ -104,16 +110,19 @@ export default function EditAlert() {
                 onClick={updateAlert}
               >
                 Update Alert
+                {spinner ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
+                  </>
+                ) : (
+                  <></>
+                )}
               </button>
             </div>
-            {/* <div className="mb-5 d-flex flex-column justify-content-center">
-              <button className="btn btn-dark sign_btn w-100" onClick={signup}>
-                SignUp
-              </button>
-              <p className="text-center text-light">
-                Already Have an Account ? <Link to="/login">Login</Link>
-              </p>
-            </div> */}
           </form>
         </div>
       </div>

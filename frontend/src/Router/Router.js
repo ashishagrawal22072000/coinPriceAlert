@@ -6,7 +6,9 @@ import Login from '../Login'
 import Navbar from '../Navbar'
 import ProtectedRouter from '../ProtectedRouter'
 import Register from '../Register'
+import Resetpassword from '../Resetpassword'
 import Track from '../Track'
+import UpdatePassword from '../UpdatePassword'
 
 export default function Router() {
   return (
@@ -41,6 +43,8 @@ export default function Router() {
           />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/reset_password" element={<Resetpassword />} />
+          <Route path="/forget_password/:token" element={<UpdatePassword />} />
         </Routes>
       </BrowserRouter>
     </div>

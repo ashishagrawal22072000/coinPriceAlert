@@ -1,31 +1,37 @@
 import React, { useState, useContext, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Store } from './Store'
+import { toast } from 'react-toastify'
 import Axios from 'axios'
 export default function Login() {
   const [form, setForm] = useState({
     email: '',
     password: '',
   })
+  const [spinner, setSpinner] = useState(false)
+
   const { state, dispatch: ctxDispatch } = useContext(Store)
   const { userInfo } = state
   const navigate = useNavigate()
-  const signin = async (e) => {
+  const forgetPassword = async (e) => {
     e.preventDefault()
     try {
-      const data = await Axios.post('/signin', {
+      setSpinner(true)
+      const { data } = await Axios.post('/signin', {
         email: form.email,
         password: form.password,
       })
       console.log(data)
-      if (data && data.status == 200) {
+      setSpinner(false)
+      if (data) {
         ctxDispatch({ type: 'USER_SIGNIN', payload: data })
         localStorage.setItem('userInfo', JSON.stringify(data))
         navigate('/')
       }
     } catch (err) {
-      // toast.error(getError(err))
-      console.log(err)
+      setSpinner(false)
+
+      toast.error(err.response.data.message)
     }
   }
 
@@ -63,13 +69,35 @@ export default function Login() {
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
+              <div className="d-flex justify-content-end">
+                <Link
+                  to="/reset_password"
+                  className="text-light mt-2 text-decoration-none fw-bold"
+                >
+                  Forget Password?
+                </Link>
+              </div>
             </div>
             <div className="mb-5 d-flex flex-column justify-content-center">
-              <button className="btn btn-dark sign_btn w-100" onClick={signin}>
+              <button
+                className="btn btn-dark sign_btn w-100"
+                onClick={forgetPassword}
+              >
                 SignIn
+                {spinner ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
+                  </>
+                ) : (
+                  <></>
+                )}
               </button>
               <p className="text-center text-light">
-                Don't Have an Account ? <Link to="/register">Login</Link>
+                Don't Have an Account ? <Link to="/register">Register</Link>
               </p>
             </div>
           </form>

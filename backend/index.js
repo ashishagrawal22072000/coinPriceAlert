@@ -9,20 +9,18 @@ const nodemailer = require('nodemailer')
 const userModel = require('./model/userModel')
 const jwt = require('jsonwebtoken')
 const { verifyEmail, isAuth } = require('./middleware/auth')
-const SECRETKEY = 'MYNAMEISASHISHAGRAWAL'
-const EMAIL = 'ashishgarg22072000@gmail.com'
-const EMAILPASS = 'lwpvdkdtytgqolja'
+
 const bcrypt = require('bcryptjs')
+const { SECRETKEY, EMAIL, EMAILPORT, SERVICE, EMAILPASS } = require('./config')
 const transport = nodemailer.createTransport({
-  service: 'gmail',
-  port: 587,
+  service: SERVICE,
+  port: EMAILPORT,
   secure: true,
   auth: {
     user: EMAIL,
     pass: EMAILPASS,
   },
 })
-
 app.use(bodyParser())
 require('./db/conn')
 
@@ -101,7 +99,7 @@ app.post('/signin', verifyEmail, async (req, res) => {
   try {
     const user = await userModel.findOne({ email: req.body.email })
     if (user) {
-      const password = bcrypt.compare(req.body.password, user.password)
+      const password = bcrypt.compareSync(req.body.password, user.password)
       if (password) {
         const token = jwt.sign({ _id: user._id }, SECRETKEY)
         res.status(200).json({
@@ -131,6 +129,72 @@ app.get('/user', isAuth, async (req, res) => {
   }
 })
 
+app.post('/change_password', async (req, res) => {
+  try {
+    const user = await userModel.findOne({ email: req.body.email })
+    if (user) {
+      const token = jwt.sign({ _id: user._id, email: user.email }, SECRETKEY, {
+        expiresIn: '1d',
+      })
+
+      const mailOption = {
+        from: EMAIL,
+        to: user.email,
+        subject: 'Change Your Password - COINTRACKER',
+        html: `<p>Hello Mr./Mrs. <strong>${
+          user.firstName.slice(0, 1).toUpperCase() + user.firstName.slice(1)
+        }</strong><br></p>
+        <p>Click on given below link to change password</p>
+        <button><a href="http:localhost:3000/forget_password/${token}" style='text-decoration: none; font-weight : bold;'>Verify Your Email</a></button>
+        `,
+      }
+
+      transport.sendMail(mailOption, (err, info) => {
+        if (err) {
+          res.status(400).json({ message: err.message })
+        } else {
+          res
+            .status(200)
+            .json({ message: 'Reset Password Link Send Successfully' })
+        }
+      })
+    } else {
+      res.status(400).json({ message: 'User Not Found' })
+    }
+  } catch (err) {
+    console.log(err)
+  }
+})
+
+app.post('/forget_password/:token', async (req, res) => {
+  try {
+    console.log(req.params.token)
+    const token = req.params.token
+    console.log(token)
+    const verifyToken = jwt.verify(token, SECRETKEY)
+    if (req.body.password == req.body.conf_password) {
+      console.log(req.body.password, req.body.conf_password)
+      const user = await userModel.findOne({ email: verifyToken.email })
+      if (user) {
+        const newPassword = await bcrypt.hashSync(req.body.password, 10)
+        const setPassword = await userModel.findByIdAndUpdate(
+          { _id: user._id },
+          { password: newPassword },
+        )
+        setPassword.save()
+        console.log(setPassword)
+
+        res.status(200).json({ message: 'Password reset successfully' })
+      }
+    }
+    const user = await userModel.findOne({ email: verifyToken.email })
+    if (user) {
+    }
+  } catch (err) {
+    console.log(err)
+  }
+})
+
 app.post('/track', isAuth, async (req, res) => {
   try {
     const tracker = new TrackerModel({
@@ -141,7 +205,7 @@ app.post('/track', isAuth, async (req, res) => {
       userID: req.body.userID,
     })
     const target = await tracker.save()
-    res.status(200).json({ target })
+    res.status(200).json({ target, message: 'Alert Set Successfull' })
   } catch (e) {
     console.log(e)
   }
@@ -194,7 +258,7 @@ app.patch('/track/:id', async (req, res) => {
     )
 
     console.log('patch track', track)
-    res.status(200).json({ message: 'Alert Update Successfully' })
+    res.status(200).json({ track, message: 'Alert Update Successfully' })
   } catch (err) {
     console.log(err)
   }
@@ -211,79 +275,48 @@ cron.schedule('* * * * *', async () => {
   )
     .then((response) => response.json())
     .then((response) => {
-      // console.log(response)
       track(response)
-      // data.unshift(response.map((ele) => ele))
-      //   setCoins(response)
     })
     .catch((err) => {
       console.error(err)
     })
-
-  // console.log('', data)
 })
-
-// console.log('data data data data', data)
 
 const track = async (data) => {
   const user = await TrackerModel.find({})
-  // const match = data[0].filter((da) => {
-  //   return user.filter((us) => {
-  //     return us.id === da.coinType && us.target <= da.current_price
-  //   })
-  // })
-  // console.log('user found', user)
-  // console.log('data found', data)
-  // const match = user.filter((us) => {
-  //   return us.coinType == data[0]?.symbol
-  // })
 
-  // const match = user.filter((us) => {
-  //   return data.filter((da) => {
-  //     return da?.symbol == us.coinType && da?.current_price <= +us.target
-  //   })
-  // })
-
-  const coinType = user.filter((us) => {
-    return data.some((da) => {
-      console.log(da?.current_price, da?.symbol)
-      console.log(da?.current_price, +us.target)
-      return da?.current_price >= +us.target
-    })
-  })
-
-  if (coinType.length > 0) {
-    coinType.forEach((ele) => {
-      const mailOption = {
-        from: EMAIL,
-        to: ele.email,
-        subject: `!!!Alert!!! - coinTracker`,
-        html: `<h2>Thank You ${ele.email} for registering on our site</h2>
- 
-        <p>Your Target for ${ele.coinType} coins of ${ele.target} is now Active</p>
-        <p>So, Don't waste time. Please Checked It Now To achieve Your Target</p>
-      `,
-      }
-
-      transport.sendMail(mailOption, (err, info) => {
-        if (err) {
-          console.log(err)
-        } else {
-          res.status(200).send('Mail Send Successfully')
-        }
+  if (user) {
+    const coinType = user.filter((us) => {
+      return data.some((da) => {
+        return da?.current_price >= +us.target
       })
     })
+
+    if (coinType.length > 0) {
+      console.log('CoinType', coinType)
+
+      coinType.forEach((ele) => {
+        const mailOption = {
+          from: EMAIL,
+          to: ele.email,
+          subject: `!!!Alert!!! - coinTracker`,
+          html: `<h2>Thank You ${ele.email} for registering on our site</h2>
+   
+          <p>Your Target for ${ele.coinType} coins of ${ele.target} is now Active</p>
+          <p>So, Don't waste time. Please Checked It Now To achieve Your Target</p>
+        `,
+        }
+
+        transport.sendMail(mailOption, (err, info) => {
+          if (err) {
+            console.log(err)
+          } else {
+            res.status(200).send('Mail Send Successfully')
+          }
+        })
+      })
+    }
   }
-
-  // if (coinType.length > 0) {
-  //   const target = user.find((us) => {
-  //     return coinType.current_price >= +us.target
-  //   })
-  // }
-
-  console.log('CoinType', coinType)
-
-  // console.log('data is matched', match)
 }
 
 app.listen(PORT, () => {
