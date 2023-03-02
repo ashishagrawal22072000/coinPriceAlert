@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 
 mongoose
   .connect(
-    'mongodb+srv://ashish:ashish@cluster0.tjgj3fm.mongodb.net/?retryWrites=true&w=majority',
+    'mongodb+srv://ashish:ashish@cluster0.agrqdne.mongodb.net/?retryWrites=true&w=majority',
   )
   .then((res) => {
     console.log('Connection established')

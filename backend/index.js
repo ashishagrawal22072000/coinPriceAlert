@@ -11,7 +11,7 @@ const jwt = require('jsonwebtoken')
 const { verifyEmail, isAuth } = require('./middleware/auth')
 
 const bcrypt = require('bcryptjs')
-const { SECRETKEY, EMAIL, EMAILPORT, SERVICE, EMAILPASS } = require('./config')
+const { SECRETKEY, EMAIL, EMAILPORT, SERVICE, EMAILPASS, FRONTEND_URL } = require('./config')
 const transport = nodemailer.createTransport({
   service: SERVICE,
   port: EMAILPORT,
@@ -37,7 +37,7 @@ app.post('/signup', async (req, res) => {
         password: req.body.password,
       })
       const data = await user.save()
-
+      console.log(data)
       const token = jwt.sign({ _id: data._id, email: data.email }, SECRETKEY, {
         expiresIn: '30d',
       })
@@ -51,9 +51,7 @@ app.post('/signup', async (req, res) => {
         }</strong><br></p>
         <p>Thank you for signing up to Our Website.</p>
         <p>Please Verify your email address</p>
-        <button><a href="http:${
-          req.headers.host
-        }/verify_email?token=${token}" style='text-decoration: none; font-weight : bold;'>Verify Your Email</a></button>
+        <button><a href="${FRONTEND_URL}/verify_email/${token}" style='text-decoration: none; font-weight : bold;'>Verify Your Email</a></button>
         `,
       }
       transport.sendMail(mailOption, (err, info) => {
@@ -69,26 +67,32 @@ app.post('/signup', async (req, res) => {
   }
 })
 
-app.get('/verify_email', async (req, res) => {
+app.get('/verify_email/:token', async (req, res) => {
   try {
-    const token = req.query.token
+    const {token} = req.params
     const verify = jwt.verify(token, SECRETKEY)
-
+    console.log(verify)
+    if(!verify) {
+      return res.status(400).json({
+        success : false,
+        message: "Email is not Verified"
+      })
+    }
     const user = await userModel.findOne({ _id: verify._id })
 
     if (user) {
       user.isVerified = true
       await user.save()
       res.status(200)
-        .send(`<h1 style='text-align : center; color : green'>Email Verified Successfully</h1>
-             <h3 style='text-align : center';>Go To Login Page To Login</h3>
-             `)
+        .json({
+          success: true,
+          message: "Email Verified Successfully"
+        })
     } else {
-      res.status(400).send(
-        `<h1 style='text-align : center; color : red'>Email Is Not Verified Or Verified</h1>
-                   <h3 style='text-align : center'>Try To Login Or Go To Email</h3>
-                   `,
-      )
+      res.status(400).json({
+        success : false,
+        message: "Email is not Verified"
+      })
     }
   } catch (err) {
     console.log(err)

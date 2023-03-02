@@ -9,6 +9,7 @@ import Register from '../Register'
 import Resetpassword from '../Resetpassword'
 import Track from '../Track'
 import UpdatePassword from '../UpdatePassword'
+import Verify_email from '../Verify_email'
 
 export default function Router() {
   return (
@@ -45,7 +46,8 @@ export default function Router() {
           <Route path="/register" element={<Register />} />
           <Route path="/reset_password" element={<Resetpassword />} />
           <Route path="/forget_password/:token" element={<UpdatePassword />} />
-        </Routes>
+          <Route path="/verify_email/:token" element={<Verify_email />} />
+         </Routes>
       </BrowserRouter>
     </div>
   )
